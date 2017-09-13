@@ -2,8 +2,8 @@ package com.alone.dts.client;
 
 import com.alibaba.fastjson.JSON;
 import com.alone.dts.client.failstore.AbstractFailStore;
-import com.alone.dts.client.failstore.FailStore;
 import com.alone.dts.thrift.service.JobService;
+import com.alone.dts.thrift.struct.HostInfo;
 import com.alone.dts.thrift.struct.JobStruct;
 import com.gary.trc.annotation.ThriftReference;
 import com.gary.trc.util.NetworkUtil;
@@ -11,6 +11,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.thrift.TException;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.lang.management.ManagementFactory;
@@ -37,6 +38,7 @@ public class JobClient implements InitializingBean {
     private String host = NetworkUtil.getLocalHost();
 
     private Timer failTimer;
+    private int pid;
 
     public void addJob(JobStruct job) {
         parseJob(job);
@@ -74,8 +76,21 @@ public class JobClient implements InitializingBean {
         }
     }
 
+    public void pause(String taskId, String msg) throws TException {
+        jobService.pause(taskId, StringUtils.isEmpty(msg) ? "empty" : msg, new HostInfo(host, 0, pid));
+    }
+
+    public void recovery(String taskId, String msg) throws TException {
+        jobService.recovery(taskId, StringUtils.isEmpty(msg) ? "empty" : msg, new HostInfo(host, 0, pid));
+    }
+
+    public void cancel(String taskId, String msg) throws TException {
+        jobService.cancel(taskId, StringUtils.isEmpty(msg) ? "empty" : msg, new HostInfo(host, 0, pid));
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
+        pid = Integer.parseInt(ManagementFactory.getRuntimeMXBean().getName().split("@")[0]);
         if (failStore != null) {
             failStore.setGroup(nodeGroup);
             failStore.init();
@@ -115,8 +130,7 @@ public class JobClient implements InitializingBean {
         if (StringUtils.isEmpty(job.getNodeGroup())) job.setNodeGroup(nodeGroup);
         if (StringUtils.isEmpty(job.getSubmitHost())) job.setSubmitHost(host);
         if (!job.isSetSubmitPid()) {
-            String name = ManagementFactory.getRuntimeMXBean().getName();
-            job.setSubmitPid(Integer.parseInt(name.split("@")[0]));
+            job.setSubmitPid(pid);
         }
     }
 }
