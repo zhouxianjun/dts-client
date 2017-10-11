@@ -88,6 +88,10 @@ public class JobClient implements InitializingBean {
         jobService.cancel(taskId, StringUtils.isEmpty(msg) ? "empty" : msg, new HostInfo(host, 0, pid));
     }
 
+    public void reset(String taskId, String msg) throws TException {
+        jobService.reset(taskId, StringUtils.isEmpty(msg) ? "empty" : msg, new HostInfo(host, 0, pid));
+    }
+
     @Override
     public void afterPropertiesSet() throws Exception {
         pid = Integer.parseInt(ManagementFactory.getRuntimeMXBean().getName().split("@")[0]);
